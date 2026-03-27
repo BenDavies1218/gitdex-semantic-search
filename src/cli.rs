@@ -16,7 +16,7 @@ pub enum Command {
         repo_path: PathBuf,
 
         /// Qdrant server URL
-        #[arg(long, env = "GITDEX_QDRANT_URL", default_value = "http://localhost:6333")]
+        #[arg(long, env = "GITDEX_QDRANT_URL", default_value = "http://localhost:6334")]
         qdrant_url: String,
 
         /// Ollama server URL
@@ -38,7 +38,7 @@ pub enum Command {
         repo_path: PathBuf,
 
         /// Qdrant server URL
-        #[arg(long, env = "GITDEX_QDRANT_URL", default_value = "http://localhost:6333")]
+        #[arg(long, env = "GITDEX_QDRANT_URL", default_value = "http://localhost:6334")]
         qdrant_url: String,
 
         /// Ollama server URL
