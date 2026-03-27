@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod embeddings;
 mod indexer;
 mod models;
 
