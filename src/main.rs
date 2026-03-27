@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod embeddings;
 mod indexer;
+mod mcp;
 mod models;
 mod qdrant;
 
@@ -51,8 +52,7 @@ async fn main() -> anyhow::Result<()> {
 
             init_logging(verbose, true);
 
-            // TODO: start MCP server
-            eprintln!("MCP server not yet implemented");
+            crate::mcp::run_mcp_server(config).await?;
         }
     }
 
