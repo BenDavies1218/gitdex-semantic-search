@@ -92,12 +92,16 @@ gitdex index <repo-path>          # Run indexing pipeline, exit on completion
     --qdrant-url <url>            # Default: http://localhost:6333
     --ollama-url <url>            # Default: http://localhost:11434
     --collection <name>           # Default: repo_index
+    --verbose / -v                # Debug-level logging
 
-gitdex serve                      # Start MCP server over stdio
+gitdex serve <repo-path>          # Start MCP server over stdio, scoped to this repo
     --qdrant-url <url>
     --ollama-url <url>
     --collection <name>
+    --verbose / -v                # Debug-level logging (warn-only by default in serve)
 ```
+
+The `serve` command requires a `repo-path` argument. This scopes the MCP server to a single repository — `index_repo` uses this path as its default, and the server validates that any explicit `repo_path` passed to `index_repo` matches.
 
 Config resolution: CLI flags > environment variables (`GITDEX_*`) > defaults.
 
@@ -176,13 +180,15 @@ pub struct Chunk {
 
 ### Point ID Generation
 
-Deterministic hash from `file_path` + `start_line`. Stable across re-indexes when code above a function changes:
+Deterministic hash from `file_path` + `start_line`. IDs are ephemeral — they change when code moves within a file. This is fine because the pipeline deletes all points for a file before re-upserting, so correctness is maintained on every re-index.
 
 ```rust
 fn make_point_id(file_path: &str, start_line: u32) -> u64 {
     let mut hasher = DefaultHasher::new();
     format!("{}::{}", file_path, start_line).hash(&mut hasher);
-    hasher.finish()
+    let id = hasher.finish();
+    // Reserve ID 0 for the metadata point
+    if id == 0 { 1 } else { id }
 }
 ```
 
@@ -226,13 +232,16 @@ def validate_token(token: str) -> bool:
 ### Qdrant Client (`qdrant.rs`)
 
 **Collection setup**:
-- Create if not exists: 768-dim vectors, cosine distance
+- Create if not exists: 768-dim vectors (hardcoded for `nomic-embed-text`), cosine distance
+- If collection already exists, verify vector dimension matches 768; fail with clear error if mismatched
+- Create payload indexes: `language` (keyword), `file_path` (text)
 - No migration logic for MVP
 
 **Upsert**:
 - Batch upsert in groups of 100 points
 - Each point: `u64` ID, vector, payload
 - Payload fields: `file_path`, `language`, `chunk_type`, `chunk_name`, `content`, `start_line`, `end_line`, `repo`
+- `repo` is derived from the basename of the configured repo path (e.g., `/home/user/my-project` → `"my-project"`), added during the upsert step (not part of the `Chunk` struct)
 
 **Stale point cleanup**: Before upserting, delete all existing points for files being re-indexed. Handles cases where refactored files produce fewer chunks.
 
@@ -262,8 +271,12 @@ pub struct SearchResult {
 ```
 
 **Filtering**: Qdrant payload filters applied server-side:
-- `language`: exact match
-- `file_path_prefix`: `Match { text: "src/auth/" }` substring match on keyword-indexed `file_path` field
+- `language`: exact match on keyword-indexed `language` field
+- `file_path_prefix`: use a `text` index type on `file_path` with `MatchText` filter for substring matching (Qdrant keyword indexes only support exact match, not prefix/substring)
+
+**Payload indexes to create on collection setup**:
+- `language`: keyword index
+- `file_path`: text index (enables substring matching for path prefix filters)
 
 **Metadata storage**: Last indexed commit hash and timestamp stored as a Qdrant point (ID `0`) rather than a separate state file.
 
@@ -275,7 +288,7 @@ pub struct SearchResult {
 
 Uses `rmcp` crate, stdio transport. Registered with:
 ```bash
-claude mcp add gitdex -- gitdex serve
+claude mcp add gitdex -- gitdex serve /path/to/my-project
 ```
 
 All logging to stderr. Stdout reserved for MCP JSON-RPC protocol.
@@ -309,20 +322,22 @@ def require_auth(request):
 
 #### `index_repo`
 
-Full re-index of a repository.
+Full re-index of the configured repository.
 
 **Parameters**:
-- `repo_path` (string, required): Absolute path to the repository
+- `repo_path` (string, optional): Absolute path to the repository. Defaults to the repo path the server was started with. If provided, must match the configured repo path (the server is scoped to one repo for MVP).
 
 **Returns**: Summary with files indexed, chunks created, duration.
 
+**Concurrency note**: `index_repo` is a blocking call. While indexing is in progress, `search_code` calls will still work against the existing index, but results may be stale until indexing completes. The pipeline deletes stale points per-file then upserts, so there is a brief window where a file's chunks are missing.
+
 #### `get_index_status`
 
-Current state of the index.
+Current state of the index for the configured collection.
 
 **Parameters**: None.
 
-**Returns**: Last commit hash, timestamp, total points, collection name.
+**Returns**: Last commit hash, timestamp, total points, collection name, repo path.
 
 ---
 
@@ -333,7 +348,7 @@ Current state of the index.
 Sequential steps, parallel within each step:
 
 1. **Validate preconditions** — check repo path has `.git`, ping Ollama and Qdrant, fail fast with clear errors
-2. **Ensure collection** — create Qdrant collection if it doesn't exist (768-dim, cosine)
+2. **Ensure collection** — create Qdrant collection if it doesn't exist (768-dim, cosine); if it exists, verify dimension matches; create payload indexes
 3. **Walk repo** — use `ignore` crate, apply skip-lists, collect `(file_path, language)` tuples
 4. **Chunk all files** — parse with tree-sitter or fall back to line chunking, collect `Chunk` structs
 5. **Delete stale points** — for each file being re-indexed, delete its existing points from Qdrant
@@ -365,6 +380,8 @@ let contents = fs::read_to_string(&path)
 | Tree-sitter parse failure | Fall back to line chunking, warn |
 | Single embedding request fails after retries | Skip chunk, warn, continue |
 | Qdrant upsert batch fails | Retry once, then fail pipeline |
+| Collection missing or empty on search | Return clear message: "No index found. Run index_repo first." |
+| Embedding dimension mismatch | Detected at startup check; if collection exists with different dimensions, fail with clear error explaining the model/collection mismatch |
 
 ### Logging
 
@@ -380,15 +397,17 @@ let contents = fs::read_to_string(&path)
 
 ```rust
 pub struct Config {
+    pub repo_path: PathBuf,       // required (CLI argument)
     pub qdrant_url: String,       // default: http://localhost:6333
     pub ollama_url: String,       // default: http://localhost:11434
-    pub ollama_model: String,     // default: nomic-embed-text
     pub collection_name: String,  // default: repo_index
     pub embed_concurrency: usize, // default: 20
     pub upsert_batch_size: usize, // default: 100
     pub max_file_size: u64,       // default: 1MB
 }
 ```
+
+**Note**: The embedding model is hardcoded to `nomic-embed-text` for MVP. The collection is always created with 768-dim vectors matching this model. Making the model configurable requires dynamically detecting the embedding dimension, which is post-MVP scope.
 
 Resolution: CLI flags > env vars (`GITDEX_*`) > defaults. No config file for MVP.
 
@@ -458,7 +477,7 @@ cd gitdex && cargo install --path .
 gitdex index /path/to/my-project
 
 # Register with Claude Code
-claude mcp add gitdex -- gitdex serve
+claude mcp add gitdex -- gitdex serve /path/to/my-project
 
 # Done — Claude Code can now use search_code, index_repo, get_index_status
 
