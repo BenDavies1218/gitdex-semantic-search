@@ -2,7 +2,7 @@ use anyhow::Result;
 use rmcp::{
     ServerHandler, ServiceExt,
     model::{ServerCapabilities, ServerInfo},
-    schemars, tool,
+    tool,
 };
 use std::sync::Arc;
 

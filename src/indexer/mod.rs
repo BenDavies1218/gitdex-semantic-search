@@ -2,7 +2,7 @@ pub mod chunker;
 pub mod language;
 pub mod walker;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use qdrant_client::qdrant::PointStruct;
 use serde_json::json;
 use std::collections::HashSet;
