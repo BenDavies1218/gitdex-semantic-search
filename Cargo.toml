@@ -1,0 +1,50 @@
+[package]
+name = "gitdex"
+version = "0.1.0"
+edition = "2021"
+description = "Local code indexer with MCP-based semantic search"
+
+[dependencies]
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Async
+tokio = { version = "1", features = ["full"] }
+
+# HTTP
+reqwest = { version = "0.12", features = ["json"] }
+
+# Serialisation
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# File walking
+ignore = "0.4"
+
+# Vector DB
+qdrant-client = "1"
+
+# MCP
+rmcp = { version = "0.1", features = ["server", "transport-io"] }
+
+# Tree-sitter
+tree-sitter = "0.24"
+tree-sitter-python = "0.23"
+tree-sitter-javascript = "0.23"
+tree-sitter-typescript = "0.23"
+tree-sitter-go = "0.23"
+tree-sitter-rust = "0.23"
+tree-sitter-java = "0.23"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = "3"
