@@ -23,6 +23,7 @@ impl GitdexMcp {
         let embedding_client = EmbeddingClient::new(
             config.ollama_url.clone(),
             config.embed_concurrency,
+            config.http_timeout_seconds,
         );
         let qdrant_store =
             QdrantStore::new(&config.qdrant_url, config.collection_name.clone()).await?;

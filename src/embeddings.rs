@@ -25,9 +25,13 @@ pub struct EmbeddingClient {
 }
 
 impl EmbeddingClient {
-    pub fn new(ollama_url: String, concurrency: usize) -> Self {
+    pub fn new(ollama_url: String, concurrency: usize, timeout_seconds: u64) -> Self {
+        let http = Client::builder()
+            .timeout(std::time::Duration::from_secs(timeout_seconds))
+            .build()
+            .expect("Failed to build HTTP client");
         Self {
-            http: Client::new(),
+            http,
             ollama_url,
             semaphore: Arc::new(Semaphore::new(concurrency)),
         }

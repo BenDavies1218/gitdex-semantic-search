@@ -29,6 +29,7 @@ pub async fn run_indexing(config: &Config) -> Result<IndexResult> {
     let embedding_client = EmbeddingClient::new(
         config.ollama_url.clone(),
         config.embed_concurrency,
+        config.http_timeout_seconds,
     );
     let qdrant_client = QdrantStore::new(&config.qdrant_url, config.collection_name.clone()).await?;
 

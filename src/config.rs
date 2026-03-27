@@ -12,6 +12,7 @@ pub struct Config {
     pub embed_concurrency: usize,
     pub upsert_batch_size: usize,
     pub max_file_size: u64,
+    pub http_timeout_seconds: u64,
     pub verbose: bool,
 }
 
@@ -20,7 +21,7 @@ impl Config {
         Self {
             repo_path,
             qdrant_url: std::env::var("GITDEX_QDRANT_URL")
-                .unwrap_or_else(|_| "http://localhost:6333".to_string()),
+                .unwrap_or_else(|_| "http://localhost:6334".to_string()),
             ollama_url: std::env::var("GITDEX_OLLAMA_URL")
                 .unwrap_or_else(|_| "http://localhost:11434".to_string()),
             collection_name: std::env::var("GITDEX_COLLECTION")
@@ -28,6 +29,7 @@ impl Config {
             embed_concurrency: 20,
             upsert_batch_size: 100,
             max_file_size: 1_048_576, // 1MB
+            http_timeout_seconds: 30,
             verbose: false,
         }
     }
@@ -47,12 +49,13 @@ mod tests {
     #[test]
     fn test_config_defaults() {
         let config = Config::new(PathBuf::from("/tmp/test-repo"));
-        assert_eq!(config.qdrant_url, "http://localhost:6333");
+        assert_eq!(config.qdrant_url, "http://localhost:6334");
         assert_eq!(config.ollama_url, "http://localhost:11434");
         assert_eq!(config.collection_name, "repo_index");
         assert_eq!(config.embed_concurrency, 20);
         assert_eq!(config.upsert_batch_size, 100);
         assert_eq!(config.max_file_size, 1_048_576);
+        assert_eq!(config.http_timeout_seconds, 30);
         assert!(!config.verbose);
     }
 
