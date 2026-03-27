@@ -166,13 +166,10 @@ impl QdrantStore {
         }
 
         let mut must_conditions = Vec::new();
-        let mut must_not_conditions = Vec::new();
-
-        // Exclude metadata point
-        must_not_conditions.push(qdrant_client::qdrant::Condition::matches(
+        let must_not_conditions = vec![qdrant_client::qdrant::Condition::matches(
             "type",
             "metadata".to_string(),
-        ));
+        )];
 
         if let Some(lang) = language {
             must_conditions.push(qdrant_client::qdrant::Condition::matches(

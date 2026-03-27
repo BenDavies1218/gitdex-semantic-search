@@ -137,21 +137,19 @@ fn chunk_with_tree_sitter(
                 module_start = Some(i);
             }
             module_lines.push(lines[i]);
-        } else if module_start.is_some() && (is_covered || lines[i].trim().is_empty()) {
-            if !module_lines.is_empty() && is_covered {
-                let start = module_start.unwrap();
-                chunks.push(Chunk {
-                    file_path: relative_path.to_string(),
-                    language: language.as_str().to_string(),
-                    chunk_type: "module".to_string(),
-                    chunk_name: None,
-                    content: module_lines.join("\n"),
-                    start_line: (start + 1) as u32,
-                    end_line: i as u32, // i is 0-indexed first covered line = 1-indexed last uncovered
-                });
-                module_lines.clear();
-                module_start = None;
-            }
+        } else if module_start.is_some() && is_covered && !module_lines.is_empty() {
+            let start = module_start.unwrap();
+            chunks.push(Chunk {
+                file_path: relative_path.to_string(),
+                language: language.as_str().to_string(),
+                chunk_type: "module".to_string(),
+                chunk_name: None,
+                content: module_lines.join("\n"),
+                start_line: (start + 1) as u32,
+                end_line: i as u32,
+            });
+            module_lines.clear();
+            module_start = None;
         }
     }
 
