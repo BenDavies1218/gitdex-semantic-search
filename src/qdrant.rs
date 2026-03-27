@@ -46,6 +46,34 @@ impl QdrantStore {
             .context("Failed to check collection existence")?;
 
         if exists {
+            // Validate that existing collection has correct dimensions
+            let info = self.client
+                .collection_info(&self.collection_name)
+                .await
+                .context("Failed to get collection info")?;
+
+            if let Some(result) = &info.result {
+                if let Some(config) = &result.config {
+                    if let Some(params) = &config.params {
+                        if let Some(qdrant_client::qdrant::vectors_config::Config::Params(
+                            vector_params,
+                        )) = params.vectors_config.as_ref().and_then(|vc| vc.config.as_ref())
+                        {
+                            if vector_params.size != EMBEDDING_DIMENSIONS {
+                                anyhow::bail!(
+                                    "Collection '{}' has vector size {} but configured embedding \
+                                     dimensions are {}. Delete the collection and re-index, or \
+                                     use a different collection name.",
+                                    self.collection_name,
+                                    vector_params.size,
+                                    EMBEDDING_DIMENSIONS
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+
             info!("Using existing collection '{}'", self.collection_name);
         } else {
             self.client
