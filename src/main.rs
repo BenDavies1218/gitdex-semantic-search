@@ -30,8 +30,11 @@ async fn main() -> anyhow::Result<()> {
             init_logging(verbose, false);
             tracing::info!("Indexing {}", config.repo_path.display());
 
-            // TODO: run indexing pipeline
-            eprintln!("Indexing not yet implemented");
+            let result = crate::indexer::run_indexing(&config).await?;
+            eprintln!(
+                "Indexed {} files, {} chunks in {:.1}s",
+                result.files_indexed, result.chunks_created, result.duration_seconds
+            );
         }
         Command::Serve {
             repo_path,
