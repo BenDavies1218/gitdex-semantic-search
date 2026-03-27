@@ -87,57 +87,27 @@ impl EmbeddingClient {
     /// Embed multiple texts with bounded concurrency.
     /// Each item is (file_path, content) — file_path is prepended for context.
     pub async fn embed_many(
-        &self,
+        self: &Arc<Self>,
         items: Vec<(String, String)>,
     ) -> Result<Vec<Option<Vec<f32>>>> {
         let mut handles = Vec::with_capacity(items.len());
 
         for (file_path, content) in items {
-            let sem = self.semaphore.clone();
-            let http = self.http.clone();
-            let ollama_url = self.ollama_url.clone();
+            let client = Arc::clone(self);
 
             let handle = tokio::spawn(async move {
-                let _permit = sem.acquire().await.unwrap();
+                let _permit = client.semaphore.acquire().await.unwrap();
                 let text = format!("{}\n{}", file_path, content);
-                let url = format!("{}/api/embeddings", ollama_url);
-                let request = EmbedRequest {
-                    model: EMBEDDING_MODEL.to_string(),
-                    prompt: text,
-                };
-
-                let mut last_err = None;
-                for attempt in 0..3u32 {
-                    if attempt > 0 {
-                        let delay = std::time::Duration::from_millis(100 * 2u64.pow(attempt));
-                        tokio::time::sleep(delay).await;
-                    }
-
-                    match http.post(&url).json(&request).send().await {
-                        Ok(resp) if resp.status().is_success() => {
-                            match resp.json::<EmbedResponse>().await {
-                                Ok(body) => return Some(body.embedding),
-                                Err(err) => {
-                                    last_err = Some(format!("{}", err));
-                                }
-                            }
-                        }
-                        Ok(resp) => {
-                            let status = resp.status();
-                            last_err = Some(format!("Ollama returned {}", status));
-                        }
-                        Err(err) => {
-                            last_err = Some(format!("{}", err));
-                        }
+                match client.embed(&text).await {
+                    Ok(embedding) => Some(embedding),
+                    Err(err) => {
+                        warn!(
+                            "Failed to embed chunk from {}: {}",
+                            file_path, err
+                        );
+                        None
                     }
                 }
-
-                warn!(
-                    "Failed to embed chunk from {}: {}",
-                    file_path,
-                    last_err.unwrap_or_else(|| "unknown error".to_string())
-                );
-                None
             });
 
             handles.push(handle);

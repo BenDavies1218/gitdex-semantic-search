@@ -26,11 +26,11 @@ pub async fn run_indexing(config: &Config) -> Result<IndexResult> {
         repo_path.display()
     );
 
-    let embedding_client = EmbeddingClient::new(
+    let embedding_client = std::sync::Arc::new(EmbeddingClient::new(
         config.ollama_url.clone(),
         config.embed_concurrency,
         config.http_timeout_seconds,
-    );
+    ));
     let qdrant_client = QdrantStore::new(&config.qdrant_url, config.collection_name.clone()).await?;
 
     info!("Checking Ollama...");
