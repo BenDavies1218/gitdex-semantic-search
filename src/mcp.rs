@@ -50,8 +50,8 @@ impl GitdexMcp {
         #[schemars(description = "Filter by language (e.g. 'python', 'rust')")]
         language: Option<String>,
         #[tool(param)]
-        #[schemars(description = "Filter to files under a path (e.g. 'src/auth/')")]
-        file_path_prefix: Option<String>,
+        #[schemars(description = "Filter to files containing this path segment (e.g. 'src/auth')")]
+        file_path_contains: Option<String>,
         #[tool(param)]
         #[schemars(description = "Number of results to return (default: 10, max: 50)")]
         top_k: Option<u64>,
@@ -69,7 +69,7 @@ impl GitdexMcp {
                 vector,
                 top_k,
                 language.as_deref(),
-                file_path_prefix.as_deref(),
+                file_path_contains.as_deref(),
             )
             .await
         {

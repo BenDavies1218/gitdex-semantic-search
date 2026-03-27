@@ -181,7 +181,7 @@ impl QdrantStore {
         vector: Vec<f32>,
         top_k: u64,
         language: Option<&str>,
-        file_path_prefix: Option<&str>,
+        file_path_contains: Option<&str>,
     ) -> Result<Vec<SearchResult>> {
         let exists = self
             .client
@@ -206,10 +206,10 @@ impl QdrantStore {
             ));
         }
 
-        if let Some(prefix) = file_path_prefix {
+        if let Some(text) = file_path_contains {
             must_conditions.push(qdrant_client::qdrant::Condition::matches_text(
                 "file_path",
-                prefix,
+                text,
             ));
         }
 

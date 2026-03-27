@@ -63,7 +63,7 @@ Semantic search across the indexed repository.
 |-----------|------|----------|-------------|
 | `query` | string | yes | Natural language or code pattern |
 | `language` | string | no | Filter by language (e.g. `python`) |
-| `file_path_prefix` | string | no | Filter to files under a path |
+| `file_path_contains` | string | no | Filter to files containing this path segment |
 | `top_k` | integer | no | Number of results (default: 10, max: 50) |
 
 ### `index_repo`
