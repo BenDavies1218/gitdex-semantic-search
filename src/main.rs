@@ -3,6 +3,7 @@ mod config;
 mod embeddings;
 mod indexer;
 mod models;
+mod qdrant;
 
 use clap::Parser;
 use cli::{Cli, Command};
