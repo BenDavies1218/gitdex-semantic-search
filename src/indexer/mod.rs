@@ -42,12 +42,51 @@ pub async fn run_indexing(config: &Config) -> Result<IndexResult> {
     // Step 2: Ensure collection
     qdrant_client.ensure_collection().await?;
 
-    // Step 3: Walk repo
-    info!("Walking {}...", repo_path.display());
-    let files = walker::walk_repo(repo_path, config.max_file_size)?;
-    info!("Found {} indexable files", files.len());
+    // Step 3: Detect incremental mode
+    let current_commit = get_head_commit(repo_path);
+    let last_commit = qdrant_client.get_last_commit().await?;
 
-    // Step 4: Chunk all files
+    let changed_files: Option<Vec<String>> = match (&last_commit, &current_commit) {
+        (Some(last), Some(current)) if last != current => {
+            match get_changed_files(repo_path, last, current) {
+                Some(files) if !files.is_empty() => {
+                    info!(
+                        "Incremental mode: {} files changed since {}",
+                        files.len(),
+                        &last[..8.min(last.len())]
+                    );
+                    Some(files)
+                }
+                _ => {
+                    info!("No changed files detected, performing full index");
+                    None
+                }
+            }
+        }
+        _ => {
+            info!("No previous index found, performing full index");
+            None
+        }
+    };
+
+    // Step 4: Walk repo
+    info!("Walking {}...", repo_path.display());
+    let all_files = walker::walk_repo(repo_path, config.max_file_size)?;
+
+    // Filter to changed files if in incremental mode
+    let files: Vec<_> = match &changed_files {
+        Some(changed) => {
+            let changed_set: HashSet<&str> = changed.iter().map(|s| s.as_str()).collect();
+            all_files
+                .into_iter()
+                .filter(|f| changed_set.contains(f.relative_path.as_str()))
+                .collect()
+        }
+        None => all_files,
+    };
+    info!("Found {} files to index", files.len());
+
+    // Step 5: Chunk all files
     let mut all_chunks = Vec::new();
     let mut files_indexed = 0;
 
@@ -74,14 +113,25 @@ pub async fn run_indexing(config: &Config) -> Result<IndexResult> {
 
     info!("Chunked {} files into {} chunks", files_indexed, all_chunks.len());
 
-    // Step 5: Delete stale points for files being re-indexed
+    // Delete points for files that were removed
+    if let Some(ref changed) = changed_files {
+        let indexed_paths: HashSet<&str> = files.iter().map(|f| f.relative_path.as_str()).collect();
+        for changed_path in changed {
+            if !indexed_paths.contains(changed_path.as_str()) {
+                info!("Removing deleted file from index: {}", changed_path);
+                qdrant_client.delete_by_file_path(changed_path).await?;
+            }
+        }
+    }
+
+    // Step 6: Delete stale points for files being re-indexed
     let unique_files: HashSet<&str> = all_chunks.iter().map(|c| c.file_path.as_str()).collect();
 
     for file_path in &unique_files {
         qdrant_client.delete_by_file_path(file_path).await?;
     }
 
-    // Step 6: Embed all chunks
+    // Step 7: Embed all chunks
     info!("Embedding {} chunks...", all_chunks.len());
     let embed_items: Vec<(String, String)> = all_chunks
         .iter()
@@ -91,7 +141,7 @@ pub async fn run_indexing(config: &Config) -> Result<IndexResult> {
     let embeddings = embedding_client.embed_many(embed_items).await?;
     info!("Embedding complete");
 
-    // Step 7: Upsert to Qdrant
+    // Step 8: Upsert to Qdrant
     let repo_name = config.repo_name();
     let mut points = Vec::new();
 
@@ -127,7 +177,7 @@ pub async fn run_indexing(config: &Config) -> Result<IndexResult> {
     }
 
     // Write metadata
-    let commit_hash = get_head_commit(repo_path).unwrap_or_else(|| "unknown".to_string());
+    let commit_hash = current_commit.unwrap_or_else(|| "unknown".to_string());
     let timestamp = chrono::Utc::now().to_rfc3339();
     qdrant_client
         .upsert_metadata(&commit_hash, &timestamp)
@@ -147,6 +197,27 @@ pub async fn run_indexing(config: &Config) -> Result<IndexResult> {
     );
 
     Ok(result)
+}
+
+/// Get files changed between two commits using git diff.
+fn get_changed_files(repo_path: &Path, from_commit: &str, to_commit: &str) -> Option<Vec<String>> {
+    std::process::Command::new("git")
+        .args(["diff", "--name-only", &format!("{}..{}", from_commit, to_commit)])
+        .current_dir(repo_path)
+        .output()
+        .ok()
+        .and_then(|o| {
+            if o.status.success() {
+                Some(
+                    String::from_utf8_lossy(&o.stdout)
+                        .lines()
+                        .map(|l| l.to_string())
+                        .collect(),
+                )
+            } else {
+                None
+            }
+        })
 }
 
 fn get_head_commit(repo_path: &Path) -> Option<String> {

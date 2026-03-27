@@ -250,6 +250,30 @@ impl QdrantStore {
         Ok(search_results)
     }
 
+    /// Retrieve the last indexed commit hash from the metadata point.
+    pub async fn get_last_commit(&self) -> Result<Option<String>> {
+        let exists = self
+            .client
+            .collection_exists(&self.collection_name)
+            .await?;
+
+        if !exists {
+            return Ok(None);
+        }
+
+        let metadata = self
+            .client
+            .get_points(
+                GetPointsBuilder::new(&self.collection_name, &[METADATA_POINT_ID.into()])
+                    .with_payload(true),
+            )
+            .await
+            .ok()
+            .and_then(|r| r.result.into_iter().next());
+
+        Ok(metadata.and_then(|point| get_string_opt(&point.payload, "last_commit")))
+    }
+
     pub async fn get_status(&self, repo_path: &str) -> Result<IndexStatus> {
         let exists = self
             .client
