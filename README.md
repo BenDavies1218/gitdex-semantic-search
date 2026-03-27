@@ -23,7 +23,7 @@ cargo install --path .
 ollama pull nomic-embed-text
 
 # 2. Start Qdrant
-docker run -d -p 6333:6333 --name qdrant qdrant/qdrant
+docker compose up -d
 
 # 3. Index a repository
 gitdex index /path/to/your/repo
@@ -42,7 +42,7 @@ Index a code repository. Walks the repo, chunks code with tree-sitter, generates
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--qdrant-url` | `http://localhost:6333` | Qdrant server URL |
+| `--qdrant-url` | `http://localhost:6334` | Qdrant server URL |
 | `--ollama-url` | `http://localhost:11434` | Ollama server URL |
 | `--collection` | `repo_index` | Qdrant collection name |
 | `-v, --verbose` | off | Debug-level logging |
