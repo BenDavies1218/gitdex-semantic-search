@@ -39,12 +39,10 @@ impl EmbeddingClient {
 
     /// Test that Ollama is reachable and the model is available.
     pub async fn health_check(&self) -> Result<()> {
-        self.embed("health check")
-            .await
-            .context(format!(
-                "Cannot reach Ollama at {}. Is it running? Try: ollama serve",
-                self.ollama_url
-            ))?;
+        self.embed("health check").await.context(format!(
+            "Cannot reach Ollama at {}. Is it running? Try: ollama serve",
+            self.ollama_url
+        ))?;
         Ok(())
     }
 
@@ -67,7 +65,9 @@ impl EmbeddingClient {
             match self.http.post(&url).json(&request).send().await {
                 Ok(resp) => {
                     if resp.status().is_success() {
-                        let body: EmbedResponse = resp.json().await
+                        let body: EmbedResponse = resp
+                            .json()
+                            .await
                             .context("Failed to parse Ollama embedding response")?;
                         return Ok(body.embedding);
                     }
@@ -101,10 +101,7 @@ impl EmbeddingClient {
                 match client.embed(&text).await {
                     Ok(embedding) => Some(embedding),
                     Err(err) => {
-                        warn!(
-                            "Failed to embed chunk from {}: {}",
-                            file_path, err
-                        );
+                        warn!("Failed to embed chunk from {}: {}", file_path, err);
                         None
                     }
                 }

@@ -46,7 +46,11 @@ pub fn make_point_id(file_path: &str, start_line: u32) -> u64 {
     let mut hasher = DefaultHasher::new();
     format!("{}::{}", file_path, start_line).hash(&mut hasher);
     let id = hasher.finish();
-    if id == 0 { 1 } else { id }
+    if id == 0 {
+        1
+    } else {
+        id
+    }
 }
 
 impl SearchResult {

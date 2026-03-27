@@ -1,8 +1,7 @@
 use anyhow::Result;
 use rmcp::{
-    ServerHandler, ServiceExt,
     model::{ServerCapabilities, ServerInfo},
-    tool,
+    tool, ServerHandler, ServiceExt,
 };
 use std::sync::Arc;
 
@@ -40,7 +39,9 @@ impl GitdexMcp {
 impl GitdexMcp {
     /// Search the indexed code repository for relevant code chunks using semantic similarity.
     /// Use this to find implementations, understand how features work, or locate specific functions and classes.
-    #[tool(description = "Search the indexed code repository for relevant code chunks using semantic similarity")]
+    #[tool(
+        description = "Search the indexed code repository for relevant code chunks using semantic similarity"
+    )]
     pub async fn search_code(
         &self,
         #[tool(param)]

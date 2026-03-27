@@ -15,25 +15,33 @@ pub struct WalkedFile {
 
 /// Directories to always skip (in addition to .gitignore rules).
 const SKIP_DIRS: &[&str] = &[
-    "node_modules", "vendor", "__pycache__", ".venv", "dist",
-    "build", ".next", "target", ".cargo", ".git",
+    "node_modules",
+    "vendor",
+    "__pycache__",
+    ".venv",
+    "dist",
+    "build",
+    ".next",
+    "target",
+    ".cargo",
+    ".git",
 ];
 
 /// File names to always skip.
 const SKIP_FILES: &[&str] = &[
-    "package-lock.json", "poetry.lock", "Cargo.lock",
-    "yarn.lock", "pnpm-lock.yaml",
+    "package-lock.json",
+    "poetry.lock",
+    "Cargo.lock",
+    "yarn.lock",
+    "pnpm-lock.yaml",
 ];
 
 /// Extensions to always skip (binary/non-text).
 const SKIP_EXTENSIONS: &[&str] = &[
-    "png", "jpg", "jpeg", "gif", "bmp", "ico", "svg", "webp",
-    "wasm", "exe", "dll", "so", "dylib", "a", "o", "obj",
-    "zip", "tar", "gz", "bz2", "xz", "7z", "rar",
-    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
-    "mp3", "mp4", "avi", "mov", "wav", "flac",
-    "ttf", "otf", "woff", "woff2", "eot",
-    "pyc", "pyo", "class",
+    "png", "jpg", "jpeg", "gif", "bmp", "ico", "svg", "webp", "wasm", "exe", "dll", "so", "dylib",
+    "a", "o", "obj", "zip", "tar", "gz", "bz2", "xz", "7z", "rar", "pdf", "doc", "docx", "xls",
+    "xlsx", "ppt", "pptx", "mp3", "mp4", "avi", "mov", "wav", "flac", "ttf", "otf", "woff",
+    "woff2", "eot", "pyc", "pyo", "class",
 ];
 
 /// Walk a repository and return all indexable files.
@@ -102,7 +110,11 @@ pub fn walk_repo(repo_path: &Path, max_file_size: u64) -> Result<Vec<WalkedFile>
         // Skip files over size limit
         if let Ok(metadata) = path.metadata() {
             if metadata.len() > max_file_size {
-                debug!("Skipping large file ({}B): {}", metadata.len(), path.display());
+                debug!(
+                    "Skipping large file ({}B): {}",
+                    metadata.len(),
+                    path.display()
+                );
                 continue;
             }
         }
@@ -179,7 +191,9 @@ mod tests {
         create_test_repo(tmp.path());
 
         let files = walk_repo(tmp.path(), 1_048_576).unwrap();
-        let has_node_modules = files.iter().any(|f| f.relative_path.contains("node_modules"));
+        let has_node_modules = files
+            .iter()
+            .any(|f| f.relative_path.contains("node_modules"));
 
         assert!(!has_node_modules, "Should skip node_modules");
     }
@@ -204,10 +218,16 @@ mod tests {
         create_test_repo(tmp.path());
 
         let files = walk_repo(tmp.path(), 1_048_576).unwrap();
-        let rs_file = files.iter().find(|f| f.relative_path == "src/main.rs").unwrap();
+        let rs_file = files
+            .iter()
+            .find(|f| f.relative_path == "src/main.rs")
+            .unwrap();
         assert_eq!(rs_file.language, Language::Rust);
 
-        let py_file = files.iter().find(|f| f.relative_path == "src/lib.py").unwrap();
+        let py_file = files
+            .iter()
+            .find(|f| f.relative_path == "src/lib.py")
+            .unwrap();
         assert_eq!(py_file.language, Language::Python);
     }
 

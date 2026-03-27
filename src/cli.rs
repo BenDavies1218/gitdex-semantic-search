@@ -2,7 +2,10 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
-#[command(name = "gitdex", about = "Local code indexer with MCP-based semantic search")]
+#[command(
+    name = "gitdex",
+    about = "Local code indexer with MCP-based semantic search"
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
@@ -16,11 +19,19 @@ pub enum Command {
         repo_path: PathBuf,
 
         /// Qdrant server URL
-        #[arg(long, env = "GITDEX_QDRANT_URL", default_value = "http://localhost:6334")]
+        #[arg(
+            long,
+            env = "GITDEX_QDRANT_URL",
+            default_value = "http://localhost:6334"
+        )]
         qdrant_url: String,
 
         /// Ollama server URL
-        #[arg(long, env = "GITDEX_OLLAMA_URL", default_value = "http://localhost:11434")]
+        #[arg(
+            long,
+            env = "GITDEX_OLLAMA_URL",
+            default_value = "http://localhost:11434"
+        )]
         ollama_url: String,
 
         /// Qdrant collection name
@@ -38,11 +49,19 @@ pub enum Command {
         repo_path: PathBuf,
 
         /// Qdrant server URL
-        #[arg(long, env = "GITDEX_QDRANT_URL", default_value = "http://localhost:6334")]
+        #[arg(
+            long,
+            env = "GITDEX_QDRANT_URL",
+            default_value = "http://localhost:6334"
+        )]
         qdrant_url: String,
 
         /// Ollama server URL
-        #[arg(long, env = "GITDEX_OLLAMA_URL", default_value = "http://localhost:11434")]
+        #[arg(
+            long,
+            env = "GITDEX_OLLAMA_URL",
+            default_value = "http://localhost:11434"
+        )]
         ollama_url: String,
 
         /// Qdrant collection name

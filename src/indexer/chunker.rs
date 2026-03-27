@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use tracing::{debug, warn};
 
-use crate::models::Chunk;
 use super::language::Language;
+use crate::models::Chunk;
 
 const LINE_CHUNK_SIZE: usize = 100;
 const LINE_CHUNK_OVERLAP: usize = 20;
@@ -10,19 +10,21 @@ const MAX_AST_CHUNK_LINES: usize = 200;
 
 /// Chunk a file's contents. Uses tree-sitter for supported languages,
 /// falls back to line-based chunking otherwise.
-pub fn chunk_file(
-    relative_path: &str,
-    content: &str,
-    language: Language,
-) -> Vec<Chunk> {
+pub fn chunk_file(relative_path: &str, content: &str, language: Language) -> Vec<Chunk> {
     if language.has_tree_sitter_grammar() {
         match chunk_with_tree_sitter(relative_path, content, language) {
             Ok(chunks) if !chunks.is_empty() => return chunks,
             Ok(_) => {
-                debug!("Tree-sitter produced no chunks for {}, falling back", relative_path);
+                debug!(
+                    "Tree-sitter produced no chunks for {}, falling back",
+                    relative_path
+                );
             }
             Err(err) => {
-                warn!("Tree-sitter failed for {}: {}, falling back to line chunking", relative_path, err);
+                warn!(
+                    "Tree-sitter failed for {}: {}, falling back to line chunking",
+                    relative_path, err
+                );
             }
         }
     }
@@ -31,11 +33,7 @@ pub fn chunk_file(
 }
 
 /// Split content into fixed-size line chunks with overlap.
-pub fn chunk_by_lines(
-    relative_path: &str,
-    content: &str,
-    language: Language,
-) -> Vec<Chunk> {
+pub fn chunk_by_lines(relative_path: &str, content: &str, language: Language) -> Vec<Chunk> {
     let lines: Vec<&str> = content.lines().collect();
     if lines.is_empty() {
         return vec![];
@@ -88,7 +86,8 @@ fn chunk_with_tree_sitter(
 ) -> Result<Vec<Chunk>> {
     let ts_language = get_tree_sitter_language(language)?;
     let mut parser = tree_sitter::Parser::new();
-    parser.set_language(&ts_language)
+    parser
+        .set_language(&ts_language)
         .context("Failed to set tree-sitter language")?;
 
     let tree = parser
@@ -220,7 +219,15 @@ fn extract_nodes(
             }
         } else {
             // Recurse into children to find nested extractable nodes
-            extract_nodes(child, node_types, lines, source, relative_path, language, chunks);
+            extract_nodes(
+                child,
+                node_types,
+                lines,
+                source,
+                relative_path,
+                language,
+                chunks,
+            );
         }
     }
 }
@@ -272,22 +279,38 @@ fn get_tree_sitter_language(language: Language) -> Result<tree_sitter::Language>
 fn get_extractable_node_types(language: Language) -> Vec<&'static str> {
     match language {
         Language::Python => vec![
-            "function_definition", "class_definition", "decorated_definition",
+            "function_definition",
+            "class_definition",
+            "decorated_definition",
         ],
         Language::JavaScript => vec![
-            "function_declaration", "class_declaration", "method_definition", "arrow_function",
+            "function_declaration",
+            "class_declaration",
+            "method_definition",
+            "arrow_function",
         ],
         Language::TypeScript => vec![
-            "function_declaration", "class_declaration", "method_definition", "arrow_function",
+            "function_declaration",
+            "class_declaration",
+            "method_definition",
+            "arrow_function",
         ],
         Language::Go => vec![
-            "function_declaration", "method_declaration", "type_declaration",
+            "function_declaration",
+            "method_declaration",
+            "type_declaration",
         ],
         Language::Rust => vec![
-            "function_item", "impl_item", "struct_item", "enum_item", "trait_item",
+            "function_item",
+            "impl_item",
+            "struct_item",
+            "enum_item",
+            "trait_item",
         ],
         Language::Java => vec![
-            "method_declaration", "class_declaration", "interface_declaration",
+            "method_declaration",
+            "class_declaration",
+            "interface_declaration",
         ],
         Language::Other => vec![],
     }
@@ -305,7 +328,10 @@ mod tests {
 
     #[test]
     fn test_chunk_small_file_single_chunk() {
-        let content = (1..=50).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n");
+        let content = (1..=50)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n");
         let chunks = chunk_by_lines("small.py", &content, Language::Python);
 
         assert_eq!(chunks.len(), 1);
@@ -317,7 +343,10 @@ mod tests {
 
     #[test]
     fn test_chunk_exact_100_lines() {
-        let content = (1..=100).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n");
+        let content = (1..=100)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n");
         let chunks = chunk_by_lines("exact.rs", &content, Language::Rust);
 
         assert_eq!(chunks.len(), 1);
@@ -326,7 +355,10 @@ mod tests {
 
     #[test]
     fn test_chunk_overlap() {
-        let content = (1..=150).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n");
+        let content = (1..=150)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n");
         let chunks = chunk_by_lines("overlap.go", &content, Language::Go);
 
         assert_eq!(chunks.len(), 2);
@@ -338,7 +370,10 @@ mod tests {
 
     #[test]
     fn test_chunk_large_file_multiple_chunks() {
-        let content = (1..=350).map(|i| format!("line {}", i)).collect::<Vec<_>>().join("\n");
+        let content = (1..=350)
+            .map(|i| format!("line {}", i))
+            .collect::<Vec<_>>()
+            .join("\n");
         let chunks = chunk_by_lines("large.js", &content, Language::JavaScript);
 
         assert!(chunks.len() >= 3);
@@ -371,12 +406,18 @@ def world():
 X = 42"#;
         let chunks = chunk_file("test.py", content, Language::Python);
 
-        let names: Vec<Option<&str>> = chunks.iter()
-            .map(|c| c.chunk_name.as_deref())
-            .collect();
+        let names: Vec<Option<&str>> = chunks.iter().map(|c| c.chunk_name.as_deref()).collect();
 
-        assert!(names.contains(&Some("hello")), "Should extract hello function, got: {:?}", names);
-        assert!(names.contains(&Some("world")), "Should extract world function, got: {:?}", names);
+        assert!(
+            names.contains(&Some("hello")),
+            "Should extract hello function, got: {:?}",
+            names
+        );
+        assert!(
+            names.contains(&Some("world")),
+            "Should extract world function, got: {:?}",
+            names
+        );
     }
 
     #[test]
@@ -399,9 +440,21 @@ pub fn run(config: Config) {
         let chunks = chunk_file("test.rs", content, Language::Rust);
 
         let types: Vec<&str> = chunks.iter().map(|c| c.chunk_type.as_str()).collect();
-        assert!(types.contains(&"struct"), "Should extract struct, got: {:?}", types);
-        assert!(types.contains(&"impl"), "Should extract impl block, got: {:?}", types);
-        assert!(types.contains(&"function"), "Should extract function, got: {:?}", types);
+        assert!(
+            types.contains(&"struct"),
+            "Should extract struct, got: {:?}",
+            types
+        );
+        assert!(
+            types.contains(&"impl"),
+            "Should extract impl block, got: {:?}",
+            types
+        );
+        assert!(
+            types.contains(&"function"),
+            "Should extract function, got: {:?}",
+            types
+        );
     }
 
     #[test]

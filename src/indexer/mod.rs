@@ -31,7 +31,8 @@ pub async fn run_indexing(config: &Config) -> Result<IndexResult> {
         config.embed_concurrency,
         config.http_timeout_seconds,
     ));
-    let qdrant_client = QdrantStore::new(&config.qdrant_url, config.collection_name.clone()).await?;
+    let qdrant_client =
+        QdrantStore::new(&config.qdrant_url, config.collection_name.clone()).await?;
 
     info!("Checking Ollama...");
     embedding_client.health_check().await?;
@@ -111,7 +112,11 @@ pub async fn run_indexing(config: &Config) -> Result<IndexResult> {
         }
     }
 
-    info!("Chunked {} files into {} chunks", files_indexed, all_chunks.len());
+    info!(
+        "Chunked {} files into {} chunks",
+        files_indexed,
+        all_chunks.len()
+    );
 
     // Delete points for files that were removed
     if let Some(ref changed) = changed_files {
@@ -202,7 +207,11 @@ pub async fn run_indexing(config: &Config) -> Result<IndexResult> {
 /// Get files changed between two commits using git diff.
 fn get_changed_files(repo_path: &Path, from_commit: &str, to_commit: &str) -> Option<Vec<String>> {
     std::process::Command::new("git")
-        .args(["diff", "--name-only", &format!("{}..{}", from_commit, to_commit)])
+        .args([
+            "diff",
+            "--name-only",
+            &format!("{}..{}", from_commit, to_commit),
+        ])
         .current_dir(repo_path)
         .output()
         .ok()

@@ -43,10 +43,9 @@ impl Language {
 
 /// File extensions that are considered indexable text files when Language is Other.
 const INDEXABLE_EXTENSIONS: &[&str] = &[
-    "md", "yaml", "yml", "toml", "json", "sql", "sh", "bash",
-    "c", "cpp", "cc", "h", "hpp", "cs", "rb", "php", "swift",
-    "kt", "scala", "r", "lua", "zig", "nim", "ex", "exs",
-    "html", "css", "scss", "xml", "graphql", "proto", "tf",
+    "md", "yaml", "yml", "toml", "json", "sql", "sh", "bash", "c", "cpp", "cc", "h", "hpp", "cs",
+    "rb", "php", "swift", "kt", "scala", "r", "lua", "zig", "nim", "ex", "exs", "html", "css",
+    "scss", "xml", "graphql", "proto", "tf",
 ];
 
 /// Check if a file should be indexed based on its extension.
@@ -77,19 +76,34 @@ mod tests {
 
     #[test]
     fn test_python_detection() {
-        assert_eq!(Language::from_extension(Path::new("main.py")), Language::Python);
+        assert_eq!(
+            Language::from_extension(Path::new("main.py")),
+            Language::Python
+        );
     }
 
     #[test]
     fn test_javascript_detection() {
-        assert_eq!(Language::from_extension(Path::new("app.js")), Language::JavaScript);
-        assert_eq!(Language::from_extension(Path::new("App.jsx")), Language::JavaScript);
+        assert_eq!(
+            Language::from_extension(Path::new("app.js")),
+            Language::JavaScript
+        );
+        assert_eq!(
+            Language::from_extension(Path::new("App.jsx")),
+            Language::JavaScript
+        );
     }
 
     #[test]
     fn test_typescript_detection() {
-        assert_eq!(Language::from_extension(Path::new("app.ts")), Language::TypeScript);
-        assert_eq!(Language::from_extension(Path::new("App.tsx")), Language::TypeScript);
+        assert_eq!(
+            Language::from_extension(Path::new("app.ts")),
+            Language::TypeScript
+        );
+        assert_eq!(
+            Language::from_extension(Path::new("App.tsx")),
+            Language::TypeScript
+        );
     }
 
     #[test]
@@ -99,23 +113,35 @@ mod tests {
 
     #[test]
     fn test_rust_detection() {
-        assert_eq!(Language::from_extension(Path::new("lib.rs")), Language::Rust);
+        assert_eq!(
+            Language::from_extension(Path::new("lib.rs")),
+            Language::Rust
+        );
     }
 
     #[test]
     fn test_java_detection() {
-        assert_eq!(Language::from_extension(Path::new("Main.java")), Language::Java);
+        assert_eq!(
+            Language::from_extension(Path::new("Main.java")),
+            Language::Java
+        );
     }
 
     #[test]
     fn test_other_known_extension() {
-        assert_eq!(Language::from_extension(Path::new("config.yaml")), Language::Other);
+        assert_eq!(
+            Language::from_extension(Path::new("config.yaml")),
+            Language::Other
+        );
         assert!(is_indexable(Path::new("config.yaml")));
     }
 
     #[test]
     fn test_unknown_extension() {
-        assert_eq!(Language::from_extension(Path::new("image.png")), Language::Other);
+        assert_eq!(
+            Language::from_extension(Path::new("image.png")),
+            Language::Other
+        );
         assert!(!is_indexable(Path::new("image.png")));
     }
 

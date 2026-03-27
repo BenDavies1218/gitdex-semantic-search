@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use qdrant_client::qdrant::{
-    value::Kind, CreateCollectionBuilder, CreateFieldIndexCollectionBuilder,
-    DeletePointsBuilder, Distance, FieldType, Filter, GetPointsBuilder, PointStruct,
-    SearchPointsBuilder, UpsertPointsBuilder, VectorParamsBuilder,
+    value::Kind, CreateCollectionBuilder, CreateFieldIndexCollectionBuilder, DeletePointsBuilder,
+    Distance, FieldType, Filter, GetPointsBuilder, PointStruct, SearchPointsBuilder,
+    UpsertPointsBuilder, VectorParamsBuilder,
 };
 use qdrant_client::Qdrant;
 use serde_json::json;
@@ -40,14 +40,16 @@ impl QdrantStore {
     }
 
     pub async fn ensure_collection(&self) -> Result<()> {
-        let exists = self.client
+        let exists = self
+            .client
             .collection_exists(&self.collection_name)
             .await
             .context("Failed to check collection existence")?;
 
         if exists {
             // Validate that existing collection has correct dimensions
-            let info = self.client
+            let info = self
+                .client
                 .collection_info(&self.collection_name)
                 .await
                 .context("Failed to get collection info")?;
@@ -57,7 +59,10 @@ impl QdrantStore {
                     if let Some(params) = &config.params {
                         if let Some(qdrant_client::qdrant::vectors_config::Config::Params(
                             vector_params,
-                        )) = params.vectors_config.as_ref().and_then(|vc| vc.config.as_ref())
+                        )) = params
+                            .vectors_config
+                            .as_ref()
+                            .and_then(|vc| vc.config.as_ref())
                         {
                             if vector_params.size != EMBEDDING_DIMENSIONS {
                                 anyhow::bail!(
@@ -78,34 +83,29 @@ impl QdrantStore {
         } else {
             self.client
                 .create_collection(
-                    CreateCollectionBuilder::new(&self.collection_name)
-                        .vectors_config(
-                            VectorParamsBuilder::new(EMBEDDING_DIMENSIONS, Distance::Cosine),
-                        ),
+                    CreateCollectionBuilder::new(&self.collection_name).vectors_config(
+                        VectorParamsBuilder::new(EMBEDDING_DIMENSIONS, Distance::Cosine),
+                    ),
                 )
                 .await
                 .context("Failed to create collection")?;
 
             // Create payload indexes
             self.client
-                .create_field_index(
-                    CreateFieldIndexCollectionBuilder::new(
-                        &self.collection_name,
-                        "language",
-                        FieldType::Keyword,
-                    ),
-                )
+                .create_field_index(CreateFieldIndexCollectionBuilder::new(
+                    &self.collection_name,
+                    "language",
+                    FieldType::Keyword,
+                ))
                 .await
                 .context("Failed to create language index")?;
 
             self.client
-                .create_field_index(
-                    CreateFieldIndexCollectionBuilder::new(
-                        &self.collection_name,
-                        "file_path",
-                        FieldType::Text,
-                    ),
-                )
+                .create_field_index(CreateFieldIndexCollectionBuilder::new(
+                    &self.collection_name,
+                    "file_path",
+                    FieldType::Text,
+                ))
                 .await
                 .context("Failed to create file_path index")?;
 
@@ -122,9 +122,7 @@ impl QdrantStore {
         )]);
 
         self.client
-            .delete_points(
-                DeletePointsBuilder::new(&self.collection_name).points(filter),
-            )
+            .delete_points(DeletePointsBuilder::new(&self.collection_name).points(filter))
             .await
             .context(format!("Failed to delete points for {}", file_path))?;
 
@@ -252,10 +250,7 @@ impl QdrantStore {
 
     /// Retrieve the last indexed commit hash from the metadata point.
     pub async fn get_last_commit(&self) -> Result<Option<String>> {
-        let exists = self
-            .client
-            .collection_exists(&self.collection_name)
-            .await?;
+        let exists = self.client.collection_exists(&self.collection_name).await?;
 
         if !exists {
             return Ok(None);
@@ -275,10 +270,7 @@ impl QdrantStore {
     }
 
     pub async fn get_status(&self, repo_path: &str) -> Result<IndexStatus> {
-        let exists = self
-            .client
-            .collection_exists(&self.collection_name)
-            .await?;
+        let exists = self.client.collection_exists(&self.collection_name).await?;
 
         if !exists {
             return Ok(IndexStatus {
@@ -290,12 +282,12 @@ impl QdrantStore {
             });
         }
 
-        let info = self
-            .client
-            .collection_info(&self.collection_name)
-            .await?;
+        let info = self.client.collection_info(&self.collection_name).await?;
 
-        let total_points = info.result.map(|r| r.points_count.unwrap_or(0)).unwrap_or(0);
+        let total_points = info
+            .result
+            .map(|r| r.points_count.unwrap_or(0))
+            .unwrap_or(0);
 
         // Try to retrieve the metadata point
         let metadata = self
@@ -326,10 +318,7 @@ impl QdrantStore {
     }
 }
 
-fn get_string(
-    payload: &HashMap<String, qdrant_client::qdrant::Value>,
-    key: &str,
-) -> String {
+fn get_string(payload: &HashMap<String, qdrant_client::qdrant::Value>, key: &str) -> String {
     payload
         .get(key)
         .and_then(|v| match &v.kind {
@@ -343,18 +332,13 @@ fn get_string_opt(
     payload: &HashMap<String, qdrant_client::qdrant::Value>,
     key: &str,
 ) -> Option<String> {
-    payload
-        .get(key)
-        .and_then(|v| match &v.kind {
-            Some(Kind::StringValue(s)) => Some(s.clone()),
-            _ => None,
-        })
+    payload.get(key).and_then(|v| match &v.kind {
+        Some(Kind::StringValue(s)) => Some(s.clone()),
+        _ => None,
+    })
 }
 
-fn get_integer(
-    payload: &HashMap<String, qdrant_client::qdrant::Value>,
-    key: &str,
-) -> i64 {
+fn get_integer(payload: &HashMap<String, qdrant_client::qdrant::Value>, key: &str) -> i64 {
     payload
         .get(key)
         .and_then(|v| match &v.kind {
