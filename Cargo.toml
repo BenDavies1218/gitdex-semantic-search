@@ -6,7 +6,7 @@ description = "Local code indexer with MCP-based semantic search"
 
 [dependencies]
 # CLI
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 
 # Async
 tokio = { version = "1", features = ["full"] }
