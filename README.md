@@ -1,3 +1,5 @@
+# WIP (Work in Progress)
+
 # gitdex
 
 [![CI](https://github.com/BenDavies1218/gitdex-semantic-search/actions/workflows/ci.yml/badge.svg)](https://github.com/BenDavies1218/gitdex-semantic-search/actions/workflows/ci.yml)
